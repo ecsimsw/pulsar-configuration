@@ -1,0 +1,86 @@
+# https://github.com/apache/pulsar-helm-chart
+#
+# git clone https://github.com/apache/pulsar-helm-chart
+# cd pulsar-helm-chart
+# ./scripts/pulsar/prepare_helm_release.sh -n pulsar -k pulsar --symmetric
+
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: pulsar
+  namespace: flux-system
+spec:
+  interval: 1h0m0s
+  url: https://pulsar.apache.org/charts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: pulsar
+  namespace: flux-system
+spec:
+  releaseName: pulsar
+  chart:
+    spec:
+      chart: pulsar
+      sourceRef:
+        kind: HelmRepository
+        name: pulsar
+  interval: 1h0m0s
+  targetNamespace: pulsar
+  install:
+    createNamespace: true
+  values:
+    namespace: pulsar
+    initialize: true
+    auth:
+      authentication:
+        enabled: true
+        provider: "jwt"
+        jwt:
+          usingSecretKey: true
+      authorization:
+        enabled: true
+    zookeeper:
+      volumes:
+        persistence: true
+        data:
+          name: data
+          size: 20Gi
+          local_storage: true
+          storageClassName: openebs-rwx # my storage class name from open-ebs as nfs
+          selector: {}
+    bookkeeper:
+      volumes:
+        persistence: true
+        journal:
+          name: journal
+          size: 10Gi
+          local_storage: true
+          storageClassName: openebs-rwx # my storage class name from open-ebs as nfs
+        ledgers:
+          name: ledgers
+          size: 50Gi
+          local_storage: true
+          storageClassName: openebs-rwx # my storage class name from open-ebs as nfs
+    proxy:
+      ports:
+        http: 1080
+        https: 10443
+        pulsar: 6650
+        pulsarssl: 6651
+      service:
+        annotations: {
+          metallb.universe.tf/address-pool: pulsar-ip-pool # for fixing metalLb assigning ip
+        }
+        type: LoadBalancer
+    kube-prometheus-stack:
+      enabled: false
+      prometheus:
+        enabled: false
+      grafana:
+        enabled: false
+      prometheus-node-exporter:
+        enabled: fasle
+      alertmanager:
+        enabled: false

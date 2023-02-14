@@ -1,0 +1,60 @@
+# https://github.com/apache/pulsar-helm-chart
+#
+# helm install pulsar apache/pulsar --timeout 10m -f pulsar-values.yaml
+# git clone https://github.com/apache/pulsar-helm-chart
+# cd pulsar-helm-chart
+# ./scripts/pulsar/prepare_helm_release.sh -n pulsar -k pulsar --symmetric
+#
+
+namespace: pulsar
+auth:
+  authentication:
+    enabled: true
+    provider: "jwt"
+    jwt:
+      usingSecretKey: true
+  authorization:
+    enabled: true
+zookeeper:
+  volumes:
+    persistence: true
+    data:
+      name: data
+      size: 20Gi
+      local_storage: true
+      storageClassName: openebs-rwx # my storage class name from open-ebs as nfs
+      selector: {}
+bookkeeper:
+  volumes:
+    persistence: true
+    journal:
+      name: journal
+      size: 10Gi
+      local_storage: true
+      storageClassName: openebs-rwx # my storage class name from open-ebs as nfs
+    ledgers:
+      name: ledgers
+      size: 50Gi
+      local_storage: true
+      storageClassName: openebs-rwx  # my storage class name from open-ebs as nfs
+proxy:
+  ports:
+    http: 1080
+    https: 10443
+    pulsar: 6650
+    pulsarssl: 6651
+  service:
+    annotations: {
+      metallb.universe.tf/address-pool: pulsar-ip-pool  # for fixing metalLb assigning ip
+    }
+    type: LoadBalancer
+kube-prometheus-stack:
+  enabled: false
+  prometheus:
+    enabled: false
+  grafana:
+    enabled: false
+  prometheus-node-exporter:
+    enabled: fasle
+  alertmanager:
+    enabled: false
